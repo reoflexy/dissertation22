@@ -7,15 +7,13 @@ const jobSchema = new mongoose.Schema({
             nodeCount: Number
         }
      ],
-     networkName: {type: String, required: true},
-     networkSpeed: {type: String, required: true},
-     bandwidth: {type: String, required: true},
+     
      cloudProcessing: {
         type: Boolean,
         required: true,
      },
      storage: {type: Number, required: false},
-     reportInterval: {type: Number, required: true},
+     
      
 })
 
