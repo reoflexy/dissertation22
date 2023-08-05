@@ -186,13 +186,16 @@ const simFunction = async(req,res) => {
                 //sum datasizes for all sensors
                 for(let i = 0; i < node.sensors.length; i++){
                     sensorDataSize = parseInt((node.sensors[i].dataSize*node.sensors[i].sensorCount),10) ;
+                   
                     //calculater sensor data size per minute
                     sensorDataSizePm = parseInt((sensorDataSize*60)/node.sensors[i].collectionInterval, 10)
+                    console.log(sensorDataSizePm)
                     nodeDataSize += sensorDataSizePm
                     totalDataSize += nodeDataSize
                     nodeSensorCount += parseInt(node.sensors[i].sensorCount,10) ;
                     totalSensorCount += nodeSensorCount
                 }
+               
 
                 //compare with gateway bandwidth
                 //console.log(job)
@@ -205,7 +208,7 @@ const simFunction = async(req,res) => {
                     report = {}
                 }
                  //compare with external bandwidth
-                if(node.externalBandwidth <= (nodeDataSize/60)){
+                if(node.externalBandwidth <= (nodeDataSize)){
                     report = {
                         reportType: 'error',
                         message: 'External network connection does not possess sufficient bandwidth to transmit data from the gateway to the cloud'
@@ -215,19 +218,19 @@ const simFunction = async(req,res) => {
                 }
 
                 //check percentage strain on internal network
-                gatewayPercentageStrain = (((nodeDataSize/60)/node.gatewayBandwidth)*100)
+                gatewayPercentageStrain = ((nodeDataSize)/node.gatewayBandwidth)*100
                 report = {
                     reportType: 'alert',
-                    message: `${node.nodeName} will use ${gatewayPercentageStrain}% of gateway bandwidth`
+                    message: `${node.nodeName} will use ${gatewayPercentageStrain}% of gateway bandwidth per minute`
                 }
                 reportList.push(report)
                 report = {}
 
                 //check percentage strain on external network
-                cloudPercentageStrain = (((nodeDataSize/60)/node.externalBandwidth)*100)
+                cloudPercentageStrain = (((nodeDataSize)/node.externalBandwidth)*100)
                 report = {
                     reportType: 'alert',
-                    message: `${node.nodeName} will use ${cloudPercentageStrain}% of cloud network bandwidth`
+                    message: `${node.nodeName} will use ${cloudPercentageStrain}% of cloud network bandwidth per minute`
                 }
                 reportList.push(report)
                 report = {}
@@ -278,7 +281,7 @@ const simFunction = async(req,res) => {
 
         //sum datasizes for all sensors
         for(let i = 0; i < node.sensors.length; i++){
-            sensorDataSize = parseInt((node.sensors[i].dataSize*node.sensors[i].sensorCount),10) ;
+            sensorDataSize =((node.sensors[i].dataSize*node.sensors[i].sensorCount)) ;
             //calculater sensor data size per minute
             sensorDataSizePm = parseInt((sensorDataSize*60)/node.sensors[i].collectionInterval, 10)
             nodeDataSize += sensorDataSizePm
@@ -288,17 +291,19 @@ const simFunction = async(req,res) => {
         }
 
         //check percentage strain on edge node
-        gatewayPercentageStrain = (((nodeDataSize/60)/node.gatewayBandwidth)*100)
+        gatewayPercentageStrain = (((nodeDataSize)/node.gatewayBandwidth)*100)
         report = {
             reportType: 'alert',
-            message: `${node.nodeName} will use ${gatewayPercentageStrain}% of gateway bandwidth`
+            message: `${node.nodeName} will use ${gatewayPercentageStrain}% of gateway bandwidth per minute`
         }
         reportList.push(report)
         report = {}
 
          //check percentage strain for external network
+         reportSizePm = ((reportSize*60)/node.reportInterval)
+        totalReportSize += reportSizePm
         
-         cloudPercentageStrain = parseInt((reportSizePm/node.externalBandwidth)*100,10)
+         cloudPercentageStrain = ((reportSizePm/node.externalBandwidth)*100)
          report = {
              reportType: 'alert',
              message: `${node.nodeName} will use ${cloudPercentageStrain}% of cloud connection bandwidth per minute`
@@ -308,7 +313,7 @@ const simFunction = async(req,res) => {
 
         //compare with gateway bandwidth
         //console.log(job)
-        if(node.gatewayBandwidth <= (nodeDataSize/60)){
+        if(node.gatewayBandwidth <= (nodeDataSize)){
             report = {
                 reportType: 'error',
                 message: 'Gateway does not possess sufficient bandwidth to accommodate data from the sensor(s)'
@@ -317,8 +322,7 @@ const simFunction = async(req,res) => {
             report = {}
         }
 
-        reportSizePm = parseInt((reportSize*60)/node.reportInterval, 10)
-        totalReportSize += reportSizePm
+        
 
         timeToMaxNodeStorage = parseInt((node.storage/nodeDataSize), 10)
         //add to report
@@ -335,7 +339,7 @@ const simFunction = async(req,res) => {
         
         
 
-        return res.status(200).json({message: 'success',data: reportList});
+        //return res.status(200).json({message: 'success',data: reportList});
 
     })
     .catch((err) => {
@@ -344,7 +348,7 @@ const simFunction = async(req,res) => {
     
 }
 
-timeToMaxStorage = parseInt((totalReportSize/job.storage), 10)
+timeToMaxStorage = parseInt((job.storage/totalReportSize), 10)
         //add to report
         report = {
             reportType: 'alert',
