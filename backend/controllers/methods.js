@@ -10,7 +10,8 @@ await nodeMod.create(req.body)
             $push: {
             nodes: {
                 nodeId: response._id,
-                nodeCount: response.nodeCount
+                nodeCount: response.nodeCount,
+                nodeName: response.nodeName
             },
           }
         }, {
