@@ -636,7 +636,7 @@ function Architecture() {
 
 
         </Modal.Body>
-      </Modal>
+    </Modal>
 
       <Modal
         show={successModal2}

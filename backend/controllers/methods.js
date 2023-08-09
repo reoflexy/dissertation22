@@ -159,6 +159,8 @@ const simFunction = async(req,res) => {
     let totalSensorCount = 0;
     let cloudPercentageStrain = 0;
     let timeToMaxStorage = 0;
+   
+
     
     let reportList = []
     let report = {}
@@ -168,201 +170,93 @@ const simFunction = async(req,res) => {
 
     const nodeList = job.nodes;
 
-        //cloud processing
-    if(job.cloudProcessing == true){
-
-        //loop through nodes
-        for (let i = 0; i < nodeList.length; i++) {
-            const currentNode = nodeList[i];
-    
-            await nodeMod.findOne({_id: currentNode.nodeId})  
-            .then((node) => {
-                let nodeDataSize = 0;
-                let nodeSensorCount = 0;
-                let sensorDataSize = 0;
-                let sensorDataSizePm = 0;
-                let gatewayPercentageStrain = 0;
-                let cloudPercentageStrain = 0;
-
-                //sum datasizes for all sensors
-                for(let i = 0; i < node.sensors.length; i++){
-                    sensorDataSize = parseInt((node.sensors[i].dataSize*node.sensors[i].sensorCount),10) ;
-                   
-                    //calculater sensor data size per minute
-                    sensorDataSizePm = parseInt((sensorDataSize*60)/node.sensors[i].collectionInterval, 10)
-                    console.log(sensorDataSizePm)
-                    nodeDataSize += sensorDataSizePm
-                    totalDataSize += nodeDataSize
-                    nodeSensorCount += parseInt(node.sensors[i].sensorCount,10) ;
-                    totalSensorCount += nodeSensorCount
-                }
-               
-
-                //compare with gateway bandwidth
-                //console.log(job)
-                if(node.gatewayBandwidth <= (nodeDataSize/60)){
-                    report = {
-                        reportType: 'error',
-                        message: 'Gateway does not possess sufficient bandwidth to accommodate data from the sensor(s)'
-                    }
-                    reportList.push(report)
-                    report = {}
-                }
-                 //compare with external bandwidth
-                if(node.externalBandwidth <= (nodeDataSize)){
-                    report = {
-                        reportType: 'error',
-                        message: 'External network connection does not possess sufficient bandwidth to transmit data from the gateway to the cloud'
-                    }
-                    reportList.push(report)
-                    report = {}
-                }
-
-                //check percentage strain on internal network
-                gatewayPercentageStrain = ((nodeDataSize)/node.gatewayBandwidth)*100
-                report = {
-                    reportType: 'alert',
-                    message: `${node.nodeName} will use ${gatewayPercentageStrain}% of gateway bandwidth per minute`
-                }
-                reportList.push(report)
-                report = {}
-
-                //check percentage strain on external network
-                cloudPercentageStrain = (((nodeDataSize)/node.externalBandwidth)*100)
-                report = {
-                    reportType: 'alert',
-                    message: `${node.nodeName} will use ${cloudPercentageStrain}% of cloud network bandwidth per minute`
-                }
-                reportList.push(report)
-                report = {}
-        
-                //calculate time to max storage in minutes
-                timeToMaxStorage = parseInt(job.storage/totalDataSize, 10)
-                //add to report
-                report = {
-                    reportType: 'alert',
-                    message: `The cloud storage selected will be filled in ${timeToMaxStorage} minutes with the current settings `
-                }
-                reportList.push(report)
-                report = {}
-
-                //sum to main dataSize count
-                //totalDataSize += nodeDataSize
-                
-    
-                //res.status(200).json({message: 'success',data: response});
-            })
-            .catch((err) => {
-                res.status(500).json({message: 'failed, cannot access '+currentNode.nodeId, data: err});
-            })
-            
-        }
-
-
-        return res.status(200).json({message: 'success',data: reportList});
-
+    //check that nodelist isnt empty
+    if(nodeList.length < 1){
+        res.status(500).json({message: 'There are no nodes on this network '});
     }
-    else if(job.cloudProcessing == false){
-        //edge processing
-  //loop through nodes
-  for (let i = 0; i < nodeList.length; i++) {
-    const currentNode = nodeList[i];
 
-    await nodeMod.findOne({_id: currentNode.nodeId})  
-    .then((node) => {
-        let nodeDataSize = 0;
-        let timeToMaxNodeStorage = 0;
-        let reportSize = 0.1;
-        let reportSizePm = 0;
-        let nodeSensorCount = 0;
-        let sensorDataSize = 0;
-        let sensorDataSizePm = 0;
-        let gatewayPercentageStrain = 0;
-        let cloudPercentageStrain = 0;
+     //loop through nodes
+     for (let i = 0; i < nodeList.length; i++) {
+        const currentNode = nodeList[i];
 
-        //sum datasizes for all sensors
-        for(let i = 0; i < node.sensors.length; i++){
-            sensorDataSize =((node.sensors[i].dataSize*node.sensors[i].sensorCount)) ;
-            //calculater sensor data size per minute
-            sensorDataSizePm = parseInt((sensorDataSize*60)/node.sensors[i].collectionInterval, 10)
-            nodeDataSize += sensorDataSizePm
-            totalDataSize += nodeDataSize
-            nodeSensorCount += parseInt(node.sensors[i].sensorCount,10) ;
-            totalSensorCount += nodeSensorCount
-        }
+        await nodeMod.findOne({_id: currentNode.nodeId})  
+        .then((node) => {
+            let sensorBandwidth = 0;
+            let sensorBandwidthPerMinute = 0;
+            let allSensorsBandwidth = 0;
+            let allSensorsBandwidthPerMinute = 0;
+            let gatewayPercentageStrain = 0;
+            let edgeCloudPercentageStrain = 0;
+            let cloudCloudPercentageStrain = 0;
+            let timeToMaxNodeStorage = 0
+            let timeToMaxCloudStorage = 0;
 
-        //check percentage strain on edge node
-        gatewayPercentageStrain = (((nodeDataSize)/node.gatewayBandwidth)*100)
-        report = {
-            reportType: 'alert',
-            message: `${node.nodeName} will use ${gatewayPercentageStrain}% of gateway bandwidth per minute`
-        }
-        reportList.push(report)
-        report = {}
+            // let nodeDataSize = 0;
+             let nodeSensorCount = 0;
+            // let sensorDataSize = 0;
+            // let sensorDataSizePm = 0;
+            // let gatewayPercentageStrain = 0;
+            // let cloudPercentageStrain = 0;
 
-         //check percentage strain for external network
-         reportSizePm = ((reportSize*60)/node.reportInterval)
-        totalReportSize += reportSizePm
-        
-         cloudPercentageStrain = ((reportSizePm/node.externalBandwidth)*100)
-         report = {
-             reportType: 'alert',
-             message: `${node.nodeName} will use ${cloudPercentageStrain}% of cloud connection bandwidth per minute`
-         }
-         reportList.push(report)
-         report = {}
-
-        //compare with gateway bandwidth
-        //console.log(job)
-        if(node.gatewayBandwidth <= (nodeDataSize)){
-            report = {
-                reportType: 'error',
-                message: 'Gateway does not possess sufficient bandwidth to accommodate data from the sensor(s)'
+            //sum datasizes for all sensors
+            for(let i = 0; i < node.sensors.length; i++){
+                sensorBandwidth = parseFloat((node.sensors[i].dataSize*node.sensors[i].sensorCount),10) ;
+               
+                // //calculater sensor data size per minute
+                sensorBandwidthPerMinute = parseFloat((sensorBandwidth*60)/node.sensors[i].collectionInterval, 10)
+                // console.log(sensorDataSizePm)
+                 allSensorsBandwidth += sensorBandwidth
+                 allSensorsBandwidthPerMinute += sensorBandwidthPerMinute 
+                // totalDataSize += nodeDataSize
+                 nodeSensorCount += parseFloat(node.sensors[i].sensorCount,10) ;
+                // totalSensorCount += nodeSensorCount
             }
+
+            //check percentage strain on internal network
+            gatewayPercentageStrain = ((allSensorsBandwidth)/node.gatewayBandwidth)*100
+
+            //check cloud percentage strain for both node and edge scenarios
+
+            //edge cloud percentage strain when processing is done in the node/edge
+            edgeCloudPercentageStrain = ((node.reportSize)/node.externalBandwidth)*100
+
+            //cloud cloud percentage strain when processing is done in the cloud
+            cloudCloudPercentageStrain = ((allSensorsBandwidth)/node.externalBandwidth)*100
+
+            //time taken to fill node storage, calculate only in edge scenario
+            if(node.storage > 0){
+                timeToMaxNodeStorage = parseFloat((allSensorsBandwidthPerMinute*node.storage), 10)
+            }
+            
+            //time to max cloud storage
+            timeToMaxCloudStorage = parseFloat((allSensorsBandwidthPerMinute*job.storage), 10)
+
+
+            report = {
+              sensorsBandwidth: allSensorsBandwidth,
+              sensorsBandwidthPm: allSensorsBandwidthPerMinute,
+              gatewayBandwidth: node.gatewayBandwidth,
+              externalBandwidth: node.externalBandwidth,
+              gatewayPercentageStrain: gatewayPercentageStrain,
+              eCloudPercentageStrain: edgeCloudPercentageStrain,
+              cCloudPercentageStrain: cloudCloudPercentageStrain,
+              timeToMaxNodeStorage: timeToMaxNodeStorage,
+              timeToMaxCloudStorage: timeToMaxCloudStorage
+
+                             }
             reportList.push(report)
             report = {}
-        }
+           
 
+        })
+        .catch((err) => {
+            res.status(500).json({message: 'failed, cannot access '+currentNode.nodeId, data: err});
+        })
         
+     }
 
-        timeToMaxNodeStorage = parseInt((node.storage/nodeDataSize), 10)
-        //add to report
-        report = {
-            reportType: 'alert',
-            message: `This storage for the node ${node.nodeName}, will be filled in ${timeToMaxNodeStorage} minutes with the current settings `
-        }
-        reportList.push(report)
-        report = {}
+     res.status(200).json({message: 'success',data: reportList});
 
-       
-
-        //sum to main dataSize count
-        
-        
-
-        //return res.status(200).json({message: 'success',data: reportList});
-
-    })
-    .catch((err) => {
-        res.status(500).json({message: 'failed, cannot access '+currentNode.nodeId, data: err});
-    })
-    
-}
-
-timeToMaxStorage = parseInt((job.storage/totalReportSize), 10)
-        //add to report
-        report = {
-            reportType: 'alert',
-            message: `This storage for the cloud server, will be filled in ${timeToMaxStorage} minutes with the current settings `
-        }
-        reportList.push(report)
-        report = {}
-
-
-
-return res.status(200).json({message: 'success',data: reportList});
-
-    }
 
 }
 
