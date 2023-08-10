@@ -12,7 +12,9 @@ const {
     getJob,
     getNodes,
     simFunction,
-    saveJobReportInterval
+    saveJobReportInterval,
+    updateSensorInterval,
+    updateNode
 } = require('../controllers/methods')
 
 router.route('/savenode').post(saveNode);
@@ -26,5 +28,7 @@ router.route('/getnodes').get(getNodes);
 router.route('/getjobs').get(getJobs);
 router.route('/getjob').get(getJob);
 router.route('/simulate').get(simFunction);
+router.route('/newInterval').post(updateSensorInterval);
+router.route('/updatenode').post(updateNode);
 
 module.exports = router

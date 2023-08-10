@@ -90,7 +90,7 @@ const saveJobStorage = async(req,res) => {
                 res.status(500).json({message: 'failed',data: err});
             })
             
-        }
+    }
 
 const saveJobProcessing = async(req,res) => {
         await jobMod.findByIdAndUpdate({_id: req.body.jobId},
@@ -164,7 +164,7 @@ const simFunction = async(req,res) => {
     
     let reportList = []
     let report = {}
-
+    console.log(req.query.jobId)
     const job = await jobMod.findOne({_id: req.query.jobId});
     console.log(job)
 
@@ -260,6 +260,38 @@ const simFunction = async(req,res) => {
 
 }
 
+const updateSensorInterval = async(req,res) => {
+    nodeMod.findOneAndUpdate(
+        { _ids: req.body.nodeId, 'sensors._id': req.body.sensorId },
+        {
+          $set: {
+            'sensors.$.collectionInterval': req.body.newInterval, 
+          }
+        }
+       )
+       .then((response) => {
+        res.status(200).json({message: 'success',data: response});
+       })
+       .catch((err) => {
+        res.status(500).json({message: 'failed',data: err});
+       })
+}
+
+const updateNode = async(req,res) => {
+    await nodeMod.findByIdAndUpdate({_id: req.body.nodeId},
+        req.body, {
+            new: true,
+            runValidators: true,
+        })
+        .then((response) => {
+            res.status(200).json({message: 'success',data: response});
+        })
+        .catch((err) => {
+            res.status(500).json({message: 'failed',data: err});
+        })
+        
+}
+
 
 
 
@@ -274,5 +306,7 @@ module.exports = {
     getJobs,
     getJob,
     simFunction,
-    saveJobReportInterval
+    saveJobReportInterval,
+    updateSensorInterval,
+    updateNode
 }
