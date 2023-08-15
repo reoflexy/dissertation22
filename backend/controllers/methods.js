@@ -241,7 +241,8 @@ const simFunction = async(req,res) => {
               eCloudPercentageStrain: edgeCloudPercentageStrain,
               cCloudPercentageStrain: cloudCloudPercentageStrain,
               timeToMaxNodeStorage: timeToMaxNodeStorage,
-              timeToMaxCloudStorage: timeToMaxCloudStorage
+              timeToMaxCloudStorage: timeToMaxCloudStorage,
+              nodeName: node.nodeName
 
                              }
             reportList.push(report)
