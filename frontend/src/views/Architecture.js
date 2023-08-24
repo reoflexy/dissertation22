@@ -664,7 +664,7 @@ function Architecture() {
           if(response.data.message == 'success'){
            // setFormData(initialFormData)
            setLoading(false)
-           navigate('/simresult', {state: {result: response.data.data}}  )
+           navigate('/simresult', {state: {result: response.data.data, result2: response.data.data2}}  )
            // alert('Node Updated')
           }
           

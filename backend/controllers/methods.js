@@ -159,20 +159,26 @@ const simFunction = async(req,res) => {
     let totalSensorCount = 0;
     let cloudPercentageStrain = 0;
     let timeToMaxStorage = 0;
+    let ctimeToMaxCloudStorage = 0;
+    let etimeToMaxCloudStorage = 0;
    
 
     
     let reportList = []
     let report = {}
-    console.log(req.query.jobId)
+
+    let storageReportList = []
+    let storageReport = {}
+   // console.log(req.query.jobId)
+    //console.log(3742)
     const job = await jobMod.findOne({_id: req.query.jobId});
-    console.log(job)
+    //console.log(3742)
 
     const nodeList = job.nodes;
 
     //check that nodelist isnt empty
     if(nodeList.length < 1){
-        res.status(500).json({message: 'There are no nodes on this network '});
+      return  res.status(500).json({message: 'There are no nodes on this network '});
     }
 
      //loop through nodes
@@ -189,7 +195,7 @@ const simFunction = async(req,res) => {
             let edgeCloudPercentageStrain = 0;
             let cloudCloudPercentageStrain = 0;
             let timeToMaxNodeStorage = 0
-            let timeToMaxCloudStorage = 0;
+           
 
             // let nodeDataSize = 0;
              let nodeSensorCount = 0;
@@ -228,9 +234,11 @@ const simFunction = async(req,res) => {
                 timeToMaxNodeStorage = parseFloat((allSensorsBandwidthPerMinute*node.storage), 10)
             }
             
-            //time to max cloud storage
-            timeToMaxCloudStorage = parseFloat((allSensorsBandwidthPerMinute*job.storage), 10)
+            //time to max cloud storage cloud scenario
+            ctimeToMaxCloudStorage += parseFloat((job.storage/allSensorsBandwidthPerMinute), 10)
 
+            //time to max cloud storage edge scenario
+            etimeToMaxCloudStorage += parseFloat( job.storage/((node.reportSize*60)/node.reportInterval), 10)
 
             report = {
               sensorsBandwidth: allSensorsBandwidth,
@@ -241,8 +249,10 @@ const simFunction = async(req,res) => {
               eCloudPercentageStrain: edgeCloudPercentageStrain,
               cCloudPercentageStrain: cloudCloudPercentageStrain,
               timeToMaxNodeStorage: timeToMaxNodeStorage,
-              timeToMaxCloudStorage: timeToMaxCloudStorage,
-              nodeName: node.nodeName
+            //   ctimeToMaxCloudStorage: ctimeToMaxCloudStorage,
+            //   etimeToMaxCloudStorage: etimeToMaxCloudStorage,
+              nodeName: node.nodeName,
+              jobId: node.jobId
 
                              }
             reportList.push(report)
@@ -256,7 +266,17 @@ const simFunction = async(req,res) => {
         
      }
 
-     res.status(200).json({message: 'success',data: reportList});
+     storageReport = {
+        jobId: req.query.jobId, 
+        ctimeToMaxCloudStorage: parseInt(ctimeToMaxCloudStorage/nodeList.length,10),
+        etimeToMaxCloudStorage: parseInt(etimeToMaxCloudStorage/nodeList.length,10),
+                    }
+    //console.log(ctimeToMaxCloudStorage)
+      storageReportList.push(storageReport)
+      storageReport = {}
+
+
+    return res.status(200).json({message: 'success',data: reportList, data2: storageReportList});
 
 
 }
